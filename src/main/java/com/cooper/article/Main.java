@@ -8,8 +8,12 @@ import com.cooper.article.setup.Properties;
 import com.cooper.article.setup.PropertiesModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class Main {
+
+    private static final Logger logger = LogManager.getLogger(Main.class);
 
     public static void main(String[] args) {
 
@@ -29,13 +33,13 @@ public class Main {
             var todaysArticle = articleService.getTodaysArticle();
 
             // write article
-            System.out.println("Today's article is:");
-            System.out.println("Title: " + todaysArticle.getTitle());
-            System.out.println("Description: " + todaysArticle.getDescription());
-            System.out.println("Url: " + todaysArticle.getUrl());
+            logger.trace("Today's article is:");
+            logger.info("Title: " + todaysArticle.getTitle());
+            logger.info("Description: " + todaysArticle.getDescription());
+            logger.info("Url: " + todaysArticle.getUrl());
 
         } catch (ArticleRetrieveException e) {
-            System.out.println(e.getMessage());
+            logger.error(e);
         }
     }
 }

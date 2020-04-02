@@ -3,6 +3,8 @@ package com.cooper.article.data.feed;
 import com.cooper.article.model.Article;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.net.URI;
@@ -13,9 +15,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class ArticleFeed implements ArticleDao {
+public class DevToArticleFeed implements ArticleDao {
 
-    private final String BASE_URL = "https://dev.to/api";
+    private static final Logger logger = LogManager.getLogger(DevToArticleFeed.class);
+
+    private final String DEFAULT_BASE_URL = "https://dev.to/api";
 
     private final HttpClient client;
 
@@ -33,7 +37,7 @@ public class ArticleFeed implements ArticleDao {
 
         // create request to article api
         var request = HttpRequest.newBuilder()
-                .uri(URI.create(String.join("/", BASE_URL, params)))
+                .uri(URI.create(String.join("/", DEFAULT_BASE_URL, params)))
                 .build();
 
         // send request
@@ -47,10 +51,10 @@ public class ArticleFeed implements ArticleDao {
             }
 
         } catch (IOException | InterruptedException e) {
-            // log
+            logger.error(e);
         }
 
         // return empty array if something went wrong and we didn't throw
-        return new ArrayList<Article>();
+        return new ArrayList<>();
     }
 }
