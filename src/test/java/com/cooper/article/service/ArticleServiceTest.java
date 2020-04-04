@@ -1,85 +1,130 @@
 package com.cooper.article.service;
 
-import com.cooper.article.setup.Properties;
-import com.cooper.article.data.feed.ArticleDao;
+import com.cooper.article.data.feed.ArticleRssFeed;
+import com.cooper.article.data.repo.FeedSourceDao;
 import com.cooper.article.exception.ArticleRetrieveException;
 import com.cooper.article.model.Article;
+import com.cooper.article.model.FeedSource;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
 public class ArticleServiceTest {
 
-    private static final String ARTICLE_TAG = "java";
+    private ArticleRssFeed articleRssFeedMock;
+    private FeedSourceDao feedSourceDaoMock;
+    private ArticleService service;
 
-    private ArticleDao articleFeedMock;
-    private Properties propsProvider;
-    private ArticleService articleService;
+    private List<FeedSource> testSources;
 
     @Before
-    public void setUp(){
-        articleFeedMock = mock(ArticleDao.class);
-        propsProvider = mock(Properties.class);
-        articleService = new ArticleService(articleFeedMock, propsProvider);
+    public void setup(){
+        articleRssFeedMock = mock(ArticleRssFeed.class);
+        feedSourceDaoMock = mock(FeedSourceDao.class);
+
+        service = new ArticleService(articleRssFeedMock, feedSourceDaoMock);
+
+        testSources = getTestSources();
     }
 
     @Test
-    public void articleCanBeRetrieved() throws Exception {
+    public void articleSerivce_ShouldReturnArticles() throws ArticleRetrieveException {
 
-        // Arrange
-        var article = getTestArticles().get(0);
-        when(propsProvider.getProperty("tags")).thenReturn(Optional.of(ARTICLE_TAG));
-        when(articleFeedMock.getTopArticles(Optional.of(ARTICLE_TAG))).thenReturn(List.of(article));
+        final int feedCount = testSources.size();
 
-        // Act
-        var a = articleService.getTodaysArticle();
+        var testArticles = getTestArticles();
+        final int articleCount = testArticles.size();
 
-        // Assert
-        assertThat(a.getTitle()).isEqualTo("test");
-        assertThat(a.getDescription()).isEqualTo("test description");
-        verify(propsProvider, times(1)).getProperty("tags");
+        when(feedSourceDaoMock.getSources()).thenReturn(testSources);
+        when(articleRssFeedMock.getFeedEntries(any(URL.class))).thenReturn(testArticles);
+
+        var results = service.getArticles();
+
+        // assert
+        verify(articleRssFeedMock, times(feedCount)).getFeedEntries(any(URL.class));
+
+        assertThat(results.size()).isEqualTo(articleCount * feedCount);
+
+        var r1 = results.get(0);
+        var r2 = results.get(1);
+
+        assertThat(r1.getTitle()).isEqualTo("test");
+        assertThat(r1.getDescription()).isEqualTo("test description");
+
+        assertThat(r2.getTitle()).isEqualTo("test2");
+        assertThat(r2.getDescription()).isEqualTo("test2 description");
     }
 
+
     @Test
-    public void articleServiceThrowWhenNoArticle() {
+    public void articleService_NoSources_ThrowsError() {
+        when(feedSourceDaoMock.getSources()).thenReturn(new ArrayList<>());
+        when(articleRssFeedMock.getFeedEntries(any(URL.class))).thenReturn(getTestArticles());
 
-        // Arrange
-        when(propsProvider.getProperty("tags")).thenReturn(Optional.of(ARTICLE_TAG));
-        when(articleFeedMock.getTopArticles(Optional.of(ARTICLE_TAG))).thenReturn(new ArrayList<Article>());
-
-        // Act
         assertThatThrownBy(() -> {
-            var a = articleService.getTodaysArticle();
+            var results = service.getArticles();
         })
-                // Assert
-                .isInstanceOf(ArticleRetrieveException.class)
-                .hasMessage("There was an error retrieving today's article.");
-        verify(propsProvider, times(1)).getProperty("tags");
+                .hasMessage("There was an error getting article from the feed(s).")
+                .isInstanceOf(ArticleRetrieveException.class);
+
     }
 
     @Test
-    public void articleServicePicksArticle() throws ArticleRetrieveException {
+    public void articleService_NoArticles_ThrowsError() {
+        when(feedSourceDaoMock.getSources()).thenReturn(testSources);
+        when(articleRssFeedMock.getFeedEntries(any(URL.class))).thenReturn(new ArrayList<>());
 
-        // Arrange
-        var testData = getTestArticles();
-        when(propsProvider.getProperty("tags")).thenReturn(Optional.of(ARTICLE_TAG));
-        when(articleFeedMock.getTopArticles(Optional.of("java"))).thenReturn(testData);
+        assertThatThrownBy(() -> {
+            var results = service.getArticles();
+        })
+                .hasMessage("There was an error getting article from the feed(s).")
+                .isInstanceOf(ArticleRetrieveException.class);
 
-        // Act
-        var a = articleService.getTodaysArticle();
-
-        // Assert
-        verify(propsProvider, times(1)).getProperty("tags");
-        assertThat(a.getTitle()).isIn(testData.stream().map(td -> td.getTitle()).toArray());
-        assertThat(a.getDescription()).isIn(testData.stream().map(td -> td.getDescription()).toArray());
+        verify(articleRssFeedMock, times(testSources.size())).getFeedEntries(any(URL.class));
     }
 
+    @Test
+    public void articleService_SomeArticles_DoesNotThrow() throws ArticleRetrieveException {
+        var testArticles = getTestArticles();
+
+        when(feedSourceDaoMock.getSources()).thenReturn(testSources);
+        when(articleRssFeedMock.getFeedEntries(any(URL.class)))
+                .thenReturn(testArticles)
+                .thenReturn(new ArrayList<>());
+
+        var results = service.getArticles();
+
+        // assert
+        verify(articleRssFeedMock, times(testSources.size())).getFeedEntries(any(URL.class));
+
+        assertThat(results.size()).isEqualTo(testArticles.size());
+
+        assertThat(results.get(0).getTitle()).isEqualTo("test");
+        assertThat(results.get(0).getDescription()).isEqualTo("test description");
+    }
+
+
+
+    private List<FeedSource> getTestSources() {
+        try {
+            return List.of(
+                    new FeedSource("test", "http://test.com/feed"),
+                    new FeedSource("test2", "http://test.com/feed")
+            );
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+        return new ArrayList<>();
+    }
 
     // get some dummy data
     private List<Article> getTestArticles(){

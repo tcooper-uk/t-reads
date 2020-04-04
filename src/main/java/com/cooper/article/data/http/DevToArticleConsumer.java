@@ -1,4 +1,4 @@
-package com.cooper.article.data.feed;
+package com.cooper.article.data.http;
 
 import com.cooper.article.model.Article;
 import com.google.gson.Gson;
@@ -15,9 +15,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class DevToArticleFeed implements ArticleDao {
+@Deprecated
+public class DevToArticleConsumer implements ArticleDao {
 
-    private static final Logger logger = LogManager.getLogger(DevToArticleFeed.class);
+    private static final Logger logger = LogManager.getLogger(DevToArticleConsumer.class);
 
     private final String DEFAULT_BASE_URL = "https://dev.to/api";
 

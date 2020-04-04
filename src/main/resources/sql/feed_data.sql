@@ -1,0 +1,2 @@
+INSERT INTO feeds (feed_name, feed_url) VALUES('DevTo', 'https://dev.to/feed');
+INSERT INTO feeds (feed_name, feed_url) VALUES('NYT_Tech', 'https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml');

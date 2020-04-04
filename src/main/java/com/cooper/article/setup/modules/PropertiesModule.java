@@ -1,5 +1,6 @@
-package com.cooper.article.setup;
+package com.cooper.article.setup.modules;
 
+import com.cooper.article.setup.Properties;
 import com.google.inject.AbstractModule;
 import com.google.inject.Scopes;
 
